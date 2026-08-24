@@ -1,0 +1,145 @@
+name: 'Tests - Setup YQ Action'
+
+on:
+  workflow_dispatch:
+
+  push:
+    branches:
+      - main
+    paths:
+      - 'action.yaml'
+      - '.github/workflows/tests.yaml'
+      - 'scripts/unixish.sh'
+      - 'scripts/windowsish.ps1'
+
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+
+concurrency:
+  group: '${{ github.workflow }}-${{ github.ref }}'
+  cancel-in-progress: true
+
+jobs:
+  test-linux:
+    strategy:
+      matrix:
+        image: ${{ github.actor == 'dependabot[bot]' && fromJSON('["ubuntu-latest"]') || fromJSON('["ubuntu-latest", "ubuntu-22.04", "ubuntu-24.04", "macos-latest", "macos-14", "macos-15", "windows-latest", "windows-2022"]') }}
+        download-compressed: ${{ github.actor == 'dependabot[bot]' && fromJSON('["false"]') || fromJSON('["true", "false"]') }}
+        force: ${{ github.actor == 'dependabot[bot]' && fromJSON('["false"]') || fromJSON('["true", "false"]') }}
+        version: ${{ github.actor == 'dependabot[bot]' && fromJSON('[""]') || fromJSON('["", "v4.44.3"]') }}
+
+    name: "Test Action - (img: ${{ matrix.image }}; dlcmp: ${{ matrix.download-compressed }}; force: ${{ matrix.force }}; v: ${{ matrix.version }})"
+    runs-on: ${{ matrix.image }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup yq
+        id: install-yq
+        uses: ./
+        with:
+          force: '${{ matrix.force }}'
+          download-compressed: '${{ matrix.download-compressed }}'
+          version: '${{ matrix.version }}'
+
+      - name: Check yq - Unix-ish
+        if: runner.os == 'Linux' || runner.os == 'macOS'
+        run: |
+          which yq
+          yq --version
+
+      - name: Check Outputs - Unix-ish
+        if: runner.os == 'Linux' || runner.os == 'macOS'
+        shell: bash -e {0}
+        # language=sh
+        run: |
+          _installed='${{ steps.install-yq.outputs.installed }}'
+          _err=
+          if [[ '${{ matrix.force }}' == 'true' ]]; then
+            # enabling "force" must result in an install
+            if [[ '${{ steps.install-yq.outputs.installed }}' != 'true' ]]; then
+              echo 'Unexpected value for "installed":'
+              echo 'Expected:   "true"'
+              echo 'Actual:     "${{ steps.install-yq.outputs.installed }}"'
+              _err=1
+            fi
+          else
+            if [[ '${{ steps.install-yq.outputs.found }}' == 'true' ]]; then
+              # if found, must not be installed without force
+              if [[ '${{ steps.install-yq.outputs.installed }}' != 'false' ]]; then
+                echo 'Unexpected value for "installed":'
+                echo 'Expected:   "false"'
+                echo 'Actual:     "${{ steps.install-yq.outputs.installed }}"'
+                _err=1
+              fi
+            else
+              # if not found, must be installed
+              if [[ '${{ steps.install-yq.outputs.installed }}' != 'true' ]]; then
+                echo 'Unexpected value for "installed":'
+                echo 'Expected:   "true"'
+                echo 'Actual:     "${{ steps.install-yq.outputs.installed }}"'
+                _err=1
+              fi
+            fi
+          fi
+          if [ -n "${_err}" ]; then exit 1; fi;
+          
+
+      - name: Check yq - Windows-ish
+        if: runner.os == 'Windows'
+        run: |
+          Get-Command "yq.exe"
+          yq.exe --version
+
+      - name: Check Outputs - Windows-ish
+        if: runner.os == 'Windows'
+        shell: powershell
+        # language=pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-StrictMode -Version Latest
+          $_installed='${{ steps.install-yq.outputs.installed }}'
+          $_err = 0
+          if ("${{ matrix.force }}" -eq "true")
+          {
+              # enabling "force" must result in an install
+              if ("${{ steps.install-yq.outputs.installed }}" -ne "true")
+              {
+                  Write-Host "Unexpected value for installed"
+                  Write-Host "Expected:   true"
+                  Write-Host "Actual:     ${{ steps.install-yq.outputs.installed }}"
+                  $_err=1
+              }
+          }
+          else
+          {
+              if ("${{ steps.install-yq.outputs.found }}" -eq "true")
+              {
+                  # if found, must not be installed without force
+                  if ("${{ steps.install-yq.outputs.installed }}" -ne "false")
+                  {
+                      Write-Host "Unexpected value for installed"
+                      Write-Host "Expected:  false"
+                      Write-Host "Actual:    ${{ steps.install-yq.outputs.installed }}"
+                      $_err=1
+                  }
+              }
+              else
+              {
+                  # if not found, must be installed
+                  if ("${{ steps.install-yq.outputs.installed }}" -ne "true") {
+                      Write-Host "Unexpected value for installed"
+                      Write-Host "Expected:  true"
+                      Write-Host "Actual:    ${{ steps.install-yq.outputs.installed }}"
+                      $_err=1
+                  }
+              }
+          }
+          if ("${_err}" -ne 0)
+          {
+              exit 1
+          }

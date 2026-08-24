@@ -1,0 +1,38 @@
+name: "Setup YQ Example - Windows"
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        type: string
+        required: false
+        description: "Version of YQ to install"
+      download-compressed:
+        type: boolean
+        required: false
+        description: "Download .tar.gz of binary rather than raw binary."
+        default: true
+      force:
+        type: boolean
+        required: false
+        description: "Do not check for existing yq installation before continuing."
+        default: false
+
+permissions: {}
+
+jobs:
+  example:
+    runs-on: windows-latest
+    steps:
+      - name: 'Setup yq'
+        uses: step-security/install-yq-action@v1
+        with:
+          version: '${{ inputs.version }}'
+          download-compressed: '${{ inputs.download-compressed }}'
+          force: '${{ inputs.force }}'
+
+      - name: 'Check yq'
+        # language=powershell
+        run: |
+          Get-Command "yq.exe"
+          yq.exe --version
