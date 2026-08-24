@@ -17,20 +17,7 @@ on:
       - main
 
 permissions:
-  actions: none
-  attestations: none
-  checks: none
   contents: read
-  deployments: none
-  id-token: none
-  issues: none
-  models: none
-  discussions: none
-  packages: none
-  pages: none
-  pull-requests: none
-  security-events: none
-  statuses: none
 
 
 concurrency:
@@ -41,25 +28,10 @@ jobs:
   test-linux:
     strategy:
       matrix:
-        image:
-          - "ubuntu-latest"
-          - "ubuntu-22.04"
-          - "ubuntu-24.04"
-          - "macos-latest"
-          - "macos-13"
-          - "macos-14"
-          - "macos-15"
-          - "windows-latest"
-          - "windows-2022"
-        download-compressed:
-          - 'true'
-          - 'false'
-        force:
-          - 'true'
-          - 'false'
-        version:
-          - ''
-          - 'v4.44.3'
+        image: ${{ github.actor == 'dependabot[bot]' && fromJSON('["ubuntu-latest"]') || fromJSON('["ubuntu-latest", "ubuntu-22.04", "ubuntu-24.04", "macos-latest", "macos-13", "macos-14", "macos-15", "windows-latest", "windows-2022"]') }}
+        download-compressed: ${{ github.actor == 'dependabot[bot]' && fromJSON('["false"]') || fromJSON('["true", "false"]') }}
+        force: ${{ github.actor == 'dependabot[bot]' && fromJSON('["false"]') || fromJSON('["true", "false"]') }}
+        version: ${{ github.actor == 'dependabot[bot]' && fromJSON('[""]') || fromJSON('["", "v4.44.3"]') }}
 
     name: "Test Action - (img: ${{ matrix.image }}; dlcmp: ${{ matrix.download-compressed }}; force: ${{ matrix.force }}; v: ${{ matrix.version }})"
     runs-on: ${{ matrix.image }}
