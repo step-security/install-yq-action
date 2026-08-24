@@ -1,0 +1,52 @@
+name: "Setup YQ Example - Linux"
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        type: string
+        required: false
+        description: "Version of YQ to install"
+      download-compressed:
+        type: boolean
+        required: false
+        description: "Download .tar.gz of binary rather than raw binary.  Save the tubes."
+        default: true
+      force:
+        type: boolean
+        required: false
+        description: "Do not check for existing yq installation before continuing."
+        default: false
+
+# you may need to change this block for your purposes.
+permissions:
+  actions: none
+  attestations: none
+  checks: none
+  contents: none
+  deployments: none
+  id-token: none
+  issues: none
+  models: none
+  discussions: none
+  packages: none
+  pages: none
+  pull-requests: none
+  security-events: none
+  statuses: none
+
+jobs:
+  example:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'Setup yq'
+        uses: dcarbone/install-yq-action@v1
+        with:
+          version: '${{ inputs.version }}'
+          download-compressed: '${{ inputs.download-compressed }}'
+          force: '${{ inputs.force }}'
+
+      - name: 'Check yq'
+        run: |
+          which yq
+          yq --version

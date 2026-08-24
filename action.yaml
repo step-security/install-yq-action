@@ -1,0 +1,76 @@
+name: Install YQ
+description: |
+  Installs a version of YQ into the job tool cache using simple shell scripts
+
+branding:
+  icon: copy
+  color: orange
+
+inputs:
+  version:
+    required: true
+    description: "Version of YQ to install"
+    default: "v4.44.3"
+  download-compressed:
+    required: false
+    description: "If 'true', downloads .tar.gz of binary rather than raw binary.  Save the tubes."
+    default: 'true'
+  force:
+    required: false
+    description: "If 'true', does not check for existing yq installation before continuing."
+    default: 'false'
+
+outputs:
+  found:
+    description: "If 'true', yq was already found on this runner"
+    value: "${{ steps.yq-check-unix.outputs.found == 'true' || steps.yq-check-windows.outputs.found == 'true' }}"
+  installed:
+    description: "If 'true', yq was installed by this action"
+    value: "${{ inputs.force == 'true' || steps.yq-check-unix.outputs.found == 'false' || steps.yq-check-windows.outputs.found == 'false' }}"
+
+runs:
+  using: composite
+  steps:
+    - name: 'Check for yq - Unix-ish'
+      id: yq-check-unix
+      if: (runner.os == 'Linux' || runner.os == 'macOS')
+      shell: bash +e {0}
+      # language=bash
+      run: |
+        _yq_bin="$(which yq)"
+        if [ -f "${_yq_bin}" ]; then
+          echo "found=true" >> $GITHUB_OUTPUT
+        else
+          echo "found=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: 'Install yq - Unix-ish'
+      if: (runner.os == 'Linux' || runner.os == 'macOS') && (steps.yq-check-unix.outputs.found == 'false' || inputs.force == 'true')
+      shell: bash
+      env:
+        DL_COMPRESSED: "${{ inputs.download-compressed == 'true' }}"
+        YQ_VERSION: '${{ inputs.version }}'
+      run: $GITHUB_ACTION_PATH/scripts/unixish.sh
+
+    - name: 'Check for yq - Windows-ish'
+      id: yq-check-windows
+      if: runner.os == 'Windows'
+      shell: powershell
+      # language=powershell
+      run: |
+        if (Get-Command "yq.exe" -ErrorAction SilentlyContinue)
+        {
+            Add-Content $Env:GITHUB_OUTPUT "found=true"
+        }
+        else
+        {
+            Add-Content $Env:GITHUB_OUTPUT "found=false"
+        }
+
+    - name: 'Install yq - Windows-ish'
+      if: runner.os == 'Windows' && (steps.yq-check-windows.outputs.found == 'false' || inputs.force == 'true')
+      shell: powershell
+      env:
+        DL_COMPRESSED: "${{ inputs.download-compressed == 'true' }}"
+        YQ_VERSION: '${{ inputs.version }}'
+      run: '& $Env:GITHUB_ACTION_PATH\scripts\windowsish.ps1'
