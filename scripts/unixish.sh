@@ -78,10 +78,42 @@ echo '::endgroup::'
 
 echo "::group::Downloading yq ${_version}"
 
+_checksums_url="${_base_url}/${_version}/checksums"
+_checksums_path="$RUNNER_TEMP/yq_checksums"
+
+echo "Checksums: ${_checksums_url}"
 echo "Src: ${_dl_url}"
 echo "Dst: ${_dl_path}"
 
-curl -L "${_dl_url}" -o "${_dl_path}"
+curl -sSfL "${_checksums_url}" -o "${_checksums_path}"
+curl -sSfL "${_dl_url}" -o "${_dl_path}"
+
+echo '::endgroup::'
+
+echo '::group::Verifying checksum'
+
+_expected_hash=$(awk -v f="${_dl_name}" '$1==f{for(i=2;i<=NF;i++) if($i~/^[0-9a-f]{64}$/) {print $i; exit}}' "${_checksums_path}") || true
+_actual_hash=
+
+if [ -z "${_expected_hash}" ]; then
+  echo "::warning::Could not find checksum for ${_dl_name} in checksums file. Skipping verification."
+elif command -v sha256sum &>/dev/null; then
+  _actual_hash=$(sha256sum "${_dl_path}" | awk '{print $1}')
+elif command -v shasum &>/dev/null; then
+  _actual_hash=$(shasum -a 256 "${_dl_path}" | awk '{print $1}')
+else
+  echo '::warning::No SHA-256 tool found (need sha256sum or shasum). Skipping verification.'
+fi
+
+if [ -n "${_expected_hash}" ] && [ -n "${_actual_hash}" ]; then
+  if [ "${_expected_hash}" != "${_actual_hash}" ]; then
+    echo "::warning::Checksum mismatch for ${_dl_name}! The binary may have been tampered with."
+    echo "::warning::Expected: ${_expected_hash}"
+    echo "::warning::Actual:   ${_actual_hash}"
+  else
+    echo "Checksum OK: ${_actual_hash}"
+  fi
+fi
 
 echo '::endgroup::'
 
@@ -102,11 +134,12 @@ echo "Installing into tool cache:"
 echo "Src: $RUNNER_TEMP/${_root_name}/${_root_name}"
 echo "Dst: $RUNNER_TOOL_CACHE/yq/yq"
 mv "$RUNNER_TEMP/${_root_name}/${_root_name}" "$RUNNER_TOOL_CACHE/yq/yq"
+chmod +x "$RUNNER_TOOL_CACHE/yq/yq"
 
 echo "Removing $RUNNER_TEMP/${_root_name}"
 rm -rf "$RUNNER_TEMP/${_root_name}"
 
 echo "Adding $RUNNER_TOOL_CACHE/yq to path..."
-echo "$RUNNER_TOOL_CACHE/yq" >> $GITHUB_PATH
+echo "$RUNNER_TOOL_CACHE/yq" >> "$GITHUB_PATH"
 
 echo '::endgroup::'

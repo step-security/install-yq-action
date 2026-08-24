@@ -84,9 +84,9 @@ runs:
       run: |
         _yq_bin="$(which yq)"
         if [ -f "${_yq_bin}" ]; then
-          echo "found=true" >> $GITHUB_OUTPUT
+          echo "found=true" >> "$GITHUB_OUTPUT"
         else
-          echo "found=false" >> $GITHUB_OUTPUT
+          echo "found=false" >> "$GITHUB_OUTPUT"
         fi
 
     - name: 'Install yq - Unix-ish'

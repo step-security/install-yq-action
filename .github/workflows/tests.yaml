@@ -28,7 +28,7 @@ jobs:
   test-linux:
     strategy:
       matrix:
-        image: ${{ github.actor == 'dependabot[bot]' && fromJSON('["ubuntu-latest"]') || fromJSON('["ubuntu-latest", "ubuntu-22.04", "ubuntu-24.04", "macos-latest", "macos-13", "macos-14", "macos-15", "windows-latest", "windows-2022"]') }}
+        image: ${{ github.actor == 'dependabot[bot]' && fromJSON('["ubuntu-latest"]') || fromJSON('["ubuntu-latest", "ubuntu-22.04", "ubuntu-24.04", "macos-latest", "macos-14", "macos-15", "windows-latest", "windows-2022"]') }}
         download-compressed: ${{ github.actor == 'dependabot[bot]' && fromJSON('["false"]') || fromJSON('["true", "false"]') }}
         force: ${{ github.actor == 'dependabot[bot]' && fromJSON('["false"]') || fromJSON('["true", "false"]') }}
         version: ${{ github.actor == 'dependabot[bot]' && fromJSON('[""]') || fromJSON('["", "v4.44.3"]') }}
